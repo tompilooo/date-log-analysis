@@ -1,13 +1,6 @@
 # 🕵️‍♂️ Log Timeline Extractor (DFIR Tool)
 
-A lightweight Python tool for **Digital Forensics & Incident Response (DFIR)** to quickly identify:
-
-* 📅 **Earliest (Start) event**
-* 📅 **Latest (End) event**
-* 🌍 **Original timezone from log source**
-* 🔄 **Normalized timeline (UTC+7)**
-
-Supports multiple log sources commonly used in investigations.
+A lightweight Python tool for **Digital Forensics & Incident Response (DFIR)** to quickly generate **timeline summaries** from various log sources.
 
 ---
 
@@ -20,25 +13,53 @@ Supports multiple log sources commonly used in investigations.
   * Palo Alto (CSV, CEF, GlobalProtect)
   * Windows Event Log (`.evtx`)
 * ✅ Automatic timestamp extraction
-* ✅ Auto-detect timezone per log source
-* ✅ Normalize all timestamps to **UTC+7 (WIB)**
-* ✅ Clean **summary output (no noise)**
+* ✅ Auto-detect log type
+* ✅ **Group logs by folder + type**
+* ✅ **Single recap timeline per log group**
+* ✅ Timezone normalization to **UTC+7 (WIB)**
+* ✅ Clean & minimal output (DFIR triage ready)
+
+---
+
+## 🆕 What’s New
+
+🔹 Logs with the **same type in the same folder are grouped into one timeline**
+
+Before:
+
+```id="old1"
+1 file = 1 timeline
+```
+
+Now:
+
+```id="new1"
+1 folder + 1 log type = 1 timeline summary
+```
+
+👉 This reflects real DFIR workflow:
+
+* Faster triage
+* Easier correlation
+* Cleaner investigation scope
 
 ---
 
 ## 📂 Example Output
 
-```
+```id="ex1"
 ===== LOG SUMMARY =====
 
-sample/apache.log
+[FOLDER] sample/palo/
+  Type        : paloalto_csv
+  Files       : 3 files
   Original TZ : UTC
-  Start       : 2015-05-17 10:05:22+00:00
-  End         : 2015-05-20 14:11:03+00:00
+  Start       : 2014-01-01 04:58:12
+  End         : 2020-08-20 09:12:11
 
   Normalized  : UTC+7
-  Start       : 2015-05-17 17:05:22+07:00
-  End         : 2015-05-20 21:11:03+07:00
+  Start       : 2014-01-01 11:58:12+07:00
+  End         : 2020-08-20 16:12:11+07:00
 --------------------------------------------------
 ```
 
@@ -49,7 +70,7 @@ sample/apache.log
 * Python 3.8+
 * Install dependencies:
 
-```
+```id="req1"
 pip install python-evtx python-dateutil
 ```
 
@@ -57,44 +78,42 @@ pip install python-evtx python-dateutil
 
 ## ▶️ Usage
 
-```
+```id="run1"
 python main.py
 ```
 
-Then input your log directory:
+Input your log directory:
 
-```
+```id="run2"
 Enter log directory path: sample/
 ```
 
 ---
 
-## 🧠 Supported Log Formats
+## 🧠 Supported Log Types
 
 ### 🔹 Web Server
 
-* Apache / Nginx (Common/Combined log)
+* Apache / Nginx (Common / Combined log)
 
 ### 🔹 Firewall
 
-* FortiGate (`date=YYYY-MM-DD time=HH:MM:SS`)
+* FortiGate
 * Palo Alto:
 
   * CSV logs
-  * CEF (`rt=...`)
-  * GlobalProtect
+  * CEF format
+  * GlobalProtect logs
 
 ### 🔹 Endpoint
 
-* Windows Event Log (`.evtx`)
+* Windows Event Logs (`.evtx`)
 
 ---
 
 ## 🌍 Timezone Handling
 
-This tool follows DFIR best practices:
-
-| Log Type      | Timezone Handling       |
+| Log Type      | Timezone Behavior       |
 | ------------- | ----------------------- |
 | Apache/Nginx  | Uses timezone from log  |
 | Palo Alto CEF | Parsed as UTC (GMT)     |
@@ -104,49 +123,69 @@ This tool follows DFIR best practices:
 
 👉 All timestamps are normalized to:
 
-```
+```id="tz1"
 UTC+7 (WIB)
 ```
 
 ---
 
-## ⚠️ Important Notes
+## 📊 Output Explanation
 
-* Logs without timezone info are **assumed UTC by default**
-* You can modify this in the script:
+Each result represents:
 
-  ```python
-  DEFAULT_TZ = timezone.utc
-  ```
-* Incorrect timezone assumptions may affect forensic timelines
+* 📁 **Folder** → Log location
+* 🏷️ **Type** → Detected log type
+* 📄 **Files** → Number of logs in group
+* 🕒 **Start/End (Original)** → Raw timeline
+* 🔄 **Start/End (Normalized)** → Converted to UTC+7
 
 ---
 
 ## 🧪 Use Cases
 
 * 🔍 Initial incident triage
-* 🕒 Timeline scoping
-* 📊 Log coverage validation
-* 🔗 Cross-log correlation preparation
+* 🕒 Define investigation time window
+* 📊 Validate log coverage
+* 🔗 Prepare for timeline correlation
+* 🛡️ Threat hunting baseline
+
+---
+
+## ⚠️ Important Notes
+
+* Logs without timezone info are **assumed UTC**
+* Modify default timezone in code if needed:
+
+  ```python
+  DEFAULT_TZ = timezone.utc
+  ```
+* Incorrect assumptions may affect forensic accuracy
 
 ---
 
 ## 🔥 Future Improvements
 
 * Export to CSV / Timesketch
-* Super timeline (multi-log merge)
+* Super timeline (cross-log correlation)
 * IOC detection (IP, domain, user)
-* Event correlation engine
+* Suspicious activity detection
+* Visualization (timeline graph)
 
 ---
 
 ## 🛡️ Disclaimer
 
-This tool is intended for **forensic analysis and security research**.
-Always validate findings with additional evidence.
+This tool is intended for:
+
+* Digital forensic analysis
+* Incident response investigation
+
+Always validate findings with multiple data sources.
 
 ---
 
 ## 👨‍💻 Author
 
-Built for DFIR practitioners who need **fast, reliable timeline extraction** from heterogeneous logs.
+Built for DFIR practitioners who need:
+
+> ⚡ Fast, clean, and reliable timeline summaries from heterogeneous logs
