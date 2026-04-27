@@ -10,27 +10,27 @@ from Evtx.Evtx import Evtx
 TARGET_TZ = timezone(timedelta(hours=7))
 DEFAULT_TZ = timezone.utc
 
+
 # =============================
-# DETECT TZ SOURCE
+# DETECT LOG TYPE
 # =============================
-def detect_tz_source(line):
-    # Apache (punya TZ sendiri)
+def detect_log_type(line):
     if "[" in line and "]" in line:
-        return "from_log"
+        return "apache"
 
-    # Palo Alto CEF (GMT)
-    if "CEF:" in line and "rt=" in line:
-        return "UTC"
+    if "date=" in line and "time=" in line:
+        return "fortigate"
 
-    # FortiGate / Palo Alto CSV
-    if "date=" in line or re.search(r'\d{4}/\d{2}/\d{2}', line):
-        return "UTC"
+    if "CEF:" in line:
+        return "paloalto_cef"
 
-    # Syslog fallback
+    if re.search(r'\d{4}/\d{2}/\d{2}', line):
+        return "paloalto_csv"
+
     if re.search(r'^[A-Za-z]{3}\s+\d{1,2}', line):
-        return "UTC"
+        return "syslog"
 
-    return "UTC"
+    return "unknown"
 
 
 # =============================
@@ -41,39 +41,27 @@ def extract_timestamp(line):
     # Palo Alto ISO
     m = re.search(r'(\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})', line)
     if m:
-        try:
-            return datetime.strptime(m.group(1), "%Y/%m/%d %H:%M:%S")
-        except:
-            pass
+        return datetime.strptime(m.group(1), "%Y/%m/%d %H:%M:%S")
 
     # Palo Alto CEF
     m = re.search(r'(rt|start)=([A-Za-z]{3} \d{2} \d{4} \d{2}:\d{2}:\d{2})', line)
     if m:
-        try:
-            return datetime.strptime(m.group(2), "%b %d %Y %H:%M:%S")
-        except:
-            pass
+        return datetime.strptime(m.group(2), "%b %d %Y %H:%M:%S")
 
     # Apache
-    m = re.search(r'\[(\d{2}/[A-Za-z]{3}/\d{4}:\d{2}:\d{2}:\d{2} [+\-]\d{4})\]', line)
+    m = re.search(r'\[(.*?)\]', line)
     if m:
         try:
             return datetime.strptime(m.group(1), "%d/%b/%Y:%H:%M:%S %z")
         except:
             pass
 
-    # FortiGate
+    # Forti
     m = re.search(r'date=(\d{4}-\d{2}-\d{2})\s+time=(\d{2}:\d{2}:\d{2})', line)
     if m:
-        try:
-            return datetime.strptime(
-                f"{m.group(1)} {m.group(2)}",
-                "%Y-%m-%d %H:%M:%S"
-            )
-        except:
-            pass
+        return datetime.strptime(f"{m.group(1)} {m.group(2)}", "%Y-%m-%d %H:%M:%S")
 
-    # Fallback
+    # fallback
     try:
         return parser.parse(line)
     except:
@@ -81,113 +69,113 @@ def extract_timestamp(line):
 
 
 # =============================
-# PROCESS TEXT LOG
+# NORMALIZE
 # =============================
-def process_text_log(filepath):
+def normalize(ts):
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=DEFAULT_TZ)
+    return ts.astimezone(TARGET_TZ)
+
+
+# =============================
+# PROCESS FILE
+# =============================
+def process_file(filepath):
     min_raw = None
     max_raw = None
-    tz_label = None
+    log_type = None
 
     try:
-        with open(filepath, 'r', errors='ignore') as f:
-            for line in f:
-                ts = extract_timestamp(line)
-                if not ts:
-                    continue
-
-                tz_source = detect_tz_source(line)
-
-                # assign TZ jika tidak ada
-                if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=DEFAULT_TZ)
-
-                if tz_label is None:
-                    if tz_source == "from_log":
-                        tz_label = str(ts.tzinfo)
-                    else:
-                        tz_label = "UTC"
-
-                # RAW (belum convert)
-                if not min_raw or ts < min_raw:
-                    min_raw = ts
-                if not max_raw or ts > max_raw:
-                    max_raw = ts
-
-    except Exception as e:
-        print(f"[!] Error: {filepath} -> {e}")
-
-    # NORMALIZE
-    min_norm = min_raw.astimezone(TARGET_TZ) if min_raw else None
-    max_norm = max_raw.astimezone(TARGET_TZ) if max_raw else None
-
-    return min_raw, max_raw, min_norm, max_norm, tz_label
-
-
-# =============================
-# PROCESS EVTX
-# =============================
-def process_evtx(filepath):
-    min_raw = None
-    max_raw = None
-
-    try:
-        with Evtx(filepath) as log:
-            for record in log.records():
-                try:
+        if filepath.lower().endswith(".evtx"):
+            with Evtx(filepath) as log:
+                for record in log.records():
                     xml = record.xml()
                     m = re.search(r'SystemTime="([^"]+)"', xml)
-
                     if m:
                         ts = parser.parse(m.group(1))
+                        log_type = "evtx"
 
                         if not min_raw or ts < min_raw:
                             min_raw = ts
                         if not max_raw or ts > max_raw:
                             max_raw = ts
 
-                except:
-                    continue
+        else:
+            with open(filepath, 'r', errors='ignore') as f:
+                for line in f:
+                    ts = extract_timestamp(line)
+                    if not ts:
+                        continue
+
+                    if not log_type:
+                        log_type = detect_log_type(line)
+
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=DEFAULT_TZ)
+
+                    if not min_raw or ts < min_raw:
+                        min_raw = ts
+                    if not max_raw or ts > max_raw:
+                        max_raw = ts
 
     except Exception as e:
-        print(f"[!] Error EVTX: {filepath} -> {e}")
+        print(f"[!] Error: {filepath} -> {e}")
 
-    min_norm = min_raw.astimezone(TARGET_TZ) if min_raw else None
-    max_norm = max_raw.astimezone(TARGET_TZ) if max_raw else None
-
-    return min_raw, max_raw, min_norm, max_norm, "UTC"
+    return log_type, min_raw, max_raw
 
 
 # =============================
-# SCAN DIRECTORY
+# GROUP BY FOLDER + TYPE
 # =============================
 def scan_logs(directory):
-    results = []
+    grouped = {}
 
     for root, _, files in os.walk(directory):
         for file in files:
             path = os.path.join(root, file)
 
-            if file.lower().endswith(".evtx"):
-                result = process_evtx(path)
-            else:
-                result = process_text_log(path)
+            log_type, start, end = process_file(path)
 
-            results.append((path, *result))
+            if not start:
+                continue
 
-    return results
+            key = (root, log_type)
+
+            if key not in grouped:
+                grouped[key] = {
+                    "files": 0,
+                    "start": start,
+                    "end": end
+                }
+
+            grouped[key]["files"] += 1
+
+            if start < grouped[key]["start"]:
+                grouped[key]["start"] = start
+
+            if end > grouped[key]["end"]:
+                grouped[key]["end"] = end
+
+    return grouped
 
 
 # =============================
 # OUTPUT
 # =============================
-def print_results(results):
+def print_results(grouped):
     print("\n===== LOG SUMMARY =====\n")
 
-    for r in results:
-        path, raw_start, raw_end, norm_start, norm_end, tz = r
+    for (folder, log_type), data in grouped.items():
+        raw_start = data["start"]
+        raw_end = data["end"]
 
-        print(path)
-        print(f"  Original TZ : {tz}")
+        norm_start = normalize(raw_start)
+        norm_end = normalize(raw_end)
+
+        print(f"[FOLDER] {folder}")
+        print(f"  Type        : {log_type}")
+        print(f"  Files       : {data['files']} files")
+        print(f"  Original TZ : UTC")
         print(f"  Start       : {raw_start}")
         print(f"  End         : {raw_end}")
         print()
@@ -202,5 +190,5 @@ def print_results(results):
 # =============================
 if __name__ == "__main__":
     log_dir = input("Enter log directory path: ").strip()
-    results = scan_logs(log_dir)
-    print_results(results)
+    grouped = scan_logs(log_dir)
+    print_results(grouped)
