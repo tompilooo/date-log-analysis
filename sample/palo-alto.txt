@@ -1,0 +1,11 @@
+# CSV
+<14>Jan 1 04:58:12 1,2014/01/01 04:58:12,002201000431,TRAFFIC,end,0,2014/01/01 04:58:11,1.1.1.1,1.1.1.1,1.1.1.1,1.1.1.1,PANT-known-APPS,,adfserf/adf,web-browsing,vsys1,trust,untrust,ae2.666,ethernet1/1,Panorama-log,2014/01/01 04:58:12,1753615,1,1111,11,21621,80,0x400000,tcp,allow,1111,111,111,11,2014/01/01 04:57:40,30,computer-and-internet-info,0,1111111111,0x0,10.0.0.0-1.111.111.111,Country,0,1,1
+
+# PAN Firewall CEF
+<14>Sep 9 10:58:41 logpoint_pal3 CEF:0|Palo Alto Networks|PAN-OS|1.1.1|end|TRAFFIC|1|rt=Sep 09 2014 08:58:41 GMT deviceExternalId=0003C104331 src=xx.xx.xxx.xx dst=xx.xx.x.xx sourceTranslatedAddress=0.0.0.0 destinationTranslatedAddress=0.0.0.0 cs1Label=Rule cs1=B-191-1 suser=lp\pp duser= app=web-browsing cs3Label=Virtual System cs3=vsys1 cs4Label=Source Zone cs4=aahg cs5Label=Destination Zone cs5=sluis deviceInboundInterface=ethernet1/3 deviceOutboundInterface=ethernet1/1 cs6Label=LogProfile cs6=AAGH-KSIA-profile cn1Label=SessionID cn1=111111 cnt=1 spt=xxxxx dpt=80 sourceTranslatedPort=0 destinationTranslatedPort=0 flexString1Label=Flags flexString1=0x4000 proto=tcp act=allow flexNumber1Label=Total bytes flexNumber1=4031 cn2Label=Packets cn2=xx start=Sep 09 2014 08:58:41 GMT cn3Label=Elapsed time in seconds cn3=13 cs2Label=URL Category cs2=any
+
+# Global Protect
+<14>Aug 20 09:12:11 panorama-01.isxx.xx 1,2020/08/20 09:12:11,013201008826,GLOBALPROTECT,0,XXXX,2020/08/20 09:11:48,vsys2,portal-getconfig,configuration,,,ist\ABC,xx,xxxxxxxx,xx.xx.xxx.xx,0.0.0.0,0.0.0.0,0.0.0.0,XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX,,4.1.11,Windows,"Microsoft Windows 10, 64-bit",1,,,"Config name: abc, Machine Certificate CN : (null)",success,,0,,0,abcl,xxxxxxxxxxxxxxxxxx,0x0000000000xxxxx
+
+# CEF
+<14>Jun 1 09:10:39 PA-ssss.ssss.com CEF:0|Palo Alto Networks|PAN-OS|8.1.14|globalprotect|SYSTEM|1|rt=Jun 01 2020 13:10:39 GMT deviceExternalId=012001023501 cs3Label=Virtual System cs3= fname=VPN-N flexString2Label=Module flexString2=general msg="GlobalProtect gateway user logout succeeded. User name: xxxxx, Client OS version: Microsoft Windows 7 Professional Service Pack 1, 64-bit, Reason: client logout." externalId=2707913 cat=globalprotectgateway-logout-succ PanOSDGL1=0 PanOSDGL2=0 PanOSDGL3=0 PanOSDGL4=0 PanOSVsysName= dvchost=PA-820 PanOSActionFlags=0x0
